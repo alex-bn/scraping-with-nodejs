@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
-const config = require('./config');
+const config = require('../config');
 const mongoose = require('mongoose');
 const Listing = require('./model/Listing');
 const fs = require('fs');
