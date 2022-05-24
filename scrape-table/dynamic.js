@@ -1,6 +1,7 @@
 const request = require('request-promise');
 const cheerio = require('cheerio');
 const fs = require('fs');
+const ObjectsToCsv = require('objects-to-csv');
 
 async function main() {
   const html = await request.get(
@@ -32,6 +33,13 @@ async function main() {
   });
 
   console.log(rows);
+
+  const csv = new ObjectsToCsv(rows);
+  // Save to file:
+  await csv.toDisk('./test.csv');
+  // Return the CSV file as string:
+  console.log(await csv.toString());
+
   fs.writeFileSync('./data.txt', JSON.stringify(rows));
 }
 main();

@@ -2,6 +2,7 @@ const request = require('request-promise');
 const cheerio = require('cheerio');
 const config = require('../config');
 const puppeteer = require('puppeteer');
+const ObjectsToCsv = require('objects-to-csv');
 
 const proxy = `http://api.scraperapi.com/?api_key=${config.scrapeAPIKey}&url=`;
 const testUrl = 'https://sfbay.craigslist.org/d/software-qa-dba-etc/search/sof';
@@ -18,8 +19,7 @@ const scrapeSample = {
   compensation: 'salary',
 };
 
-const scrapeResults = [];
-
+const headerResults = [];
 async function scrapeJobHeader() {
   try {
     const htmlResult = await request.get(url);
@@ -38,57 +38,42 @@ async function scrapeJobHeader() {
         .replace(/\W/g, '');
 
       const result = { title, url, datePosted, hood };
-      scrapeResults.push(result);
+      headerResults.push(result);
     });
 
-    console.log('pages to iterate: ', scrapeResults.length);
-    return scrapeResults;
+    console.log('Results: ', headerResults.length, '/120');
+    return headerResults;
   } catch (error) {
     console.log(error);
   }
 }
 
-const newList = [];
-
-// proxy limitation - need to change this and use pptr I guess
-async function scrapeDescription(jobsHeader) {
+// pptr will loop through all urls
+const descriptionResultsPuppeteer = [];
+async function scrapeDescriptionWithPuppeteer(headerResults) {
   try {
-    // return await Promise.all([
-    //   jobsHeader.map(async job => {
-    //     const htmlResult = await request.get(proxy + job.url);
-    //     const $ = cheerio.load(htmlResult);
-
-    //     $('.print-qrcode-container').remove();
-    //     job.description = $('#postingbody').text();
-    //     job.address = $('div.mapaddress').text();
-    //     job.compensation = $('.attrgroup')
-    //       .children()
-    //       .first()
-    //       .text()
-    //       .replace('compensation: ', '');
-    //     return job;
-    //   }),
-    // ]);
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
 
-    for (let i = 0; i < 3; i++) {
+    // loop # elements
+    for (let i = 0; i < 5; i++) {
       await sleep(1000);
-
-      await page.goto(proxy + jobsHeader[i].url);
+      await page.goto(proxy + headerResults[i].url);
       const htmlResult = await page.content();
       const $ = cheerio.load(htmlResult);
 
       $('.print-qrcode-container').remove();
-      jobsHeader[i].description = $('#postingbody').text();
-      jobsHeader[i].address = $('div.mapaddress').text();
-      jobsHeader[i].compensation = $('.attrgroup')
+      headerResults[i].description = $('#postingbody')
+        .text()
+        .replace(/\r?\n|\r/g, '');
+      headerResults[i].address = $('div.mapaddress').text();
+      headerResults[i].compensation = $('.attrgroup')
         .children()
         .first()
         .text()
         .replace('compensation: ', '');
 
-      newList.push(jobsHeader[i]);
+      descriptionResultsPuppeteer.push(headerResults[i]);
     }
 
     await browser.close();
@@ -97,15 +82,83 @@ async function scrapeDescription(jobsHeader) {
   }
 }
 
+async function scrapeDescriptionWithRequest(headerResults) {
+  try {
+    // Problem: proxy cannot handle this many concurrent requests
+    // return await Promise.all([
+    //   headerResults.map(async result => {
+    //     const htmlResult = await request.get(proxy + result.url);
+    //     const $ = cheerio.load(htmlResult);
+    //     $('.print-qrcode-container').remove();
+    //     result.description = $('#postingbody').text();
+    //     result.address = $('div.mapaddress').text();
+    //     result.compensation = $('.attrgroup')
+    //       .children()
+    //       .first()
+    //       .text()
+    //       .replace('compensation: ', '');
+    //     return result;
+    //   }),
+    // ]);
+
+    // loop # elements
+    for (let i = 0; i < 10; i++) {
+      let job = headerResults[i];
+      const html = await request.get(proxy + job.url);
+      console.log('job', i);
+
+      const $ = await cheerio.load(html);
+      $('.print-qrcode-container').remove();
+      job.description = $('#postingbody')
+        .text()
+        .replace(/\r?\n|\r/g, '');
+      job.address = $('div.mapaddress').text();
+      job.compensation = $('.attrgroup')
+        .children()
+        .first()
+        .text()
+        .replace('compensation: ', '');
+
+      console.log(job);
+    }
+    return headerResults;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// # to avoid getting banned
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function scrape() {
-  const jobsHeader = await scrapeJobHeader();
-  const jobsFullData = await scrapeDescription(jobsHeader);
-  // console.log(jobsFullData);
-  console.log(newList);
+// fix the scraper first
+async function createCsvFile(data) {
+  const csv = new ObjectsToCsv(data);
+  // Save to file:
+  await csv.toDisk('./test.csv');
+  // Return the CSV file as string:
+  console.log(await csv.toString());
 }
 
-scrape();
+// main
+async function main() {
+  // step 1
+  const jobsHeader = await scrapeJobHeader();
+  // console.log(jobsHeader);
+
+  // // step 2
+  // const fullDataWithPuppeteer = await scrapeDescriptionWithPuppeteer(
+  //   jobsHeader
+  // );
+  // // console.log(descriptionResultsPuppeteer);
+
+  // alternative step
+  const fullDataWithRequest = await scrapeDescriptionWithRequest(jobsHeader);
+
+  // await createCsvFile(newList);
+  // console.log(jobsFullData);
+  // console.log(newList);
+}
+
+main();
