@@ -46,7 +46,11 @@ async function scrapeListings(page) {
       const title = $(titleElement).text();
       const url = $(titleElement).attr('href');
       const datePosted = new Date($(timeElement).attr('datetime'));
-      const neighborhood = $(hoodElement).text().trim('').replace(/\W/g, ''); // \W stands for non-word characters
+      const neighborhood = $(hoodElement)
+        .text()
+        .trim('')
+        .trim()
+        .replace(/\W/g, ''); // \W stands for non-word characters
 
       return { title, url, datePosted, neighborhood };
     })

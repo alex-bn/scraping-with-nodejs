@@ -119,7 +119,7 @@ async function scrapeDescriptionWithRequest(headerResults) {
         .text()
         .replace('compensation: ', '');
 
-      console.log(job);
+      // console.log(job);
     }
     return headerResults;
   } catch (error) {
@@ -155,10 +155,7 @@ async function main() {
 
   // alternative step
   const fullDataWithRequest = await scrapeDescriptionWithRequest(jobsHeader);
-
-  // await createCsvFile(newList);
-  // console.log(jobsFullData);
-  // console.log(newList);
+  // console.log(headerResults);
 }
 
 main();
