@@ -7,7 +7,7 @@ async function scrape() {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
 
-  for (let index = 1; index <= 5; index++) {
+  for (let index = 1; index <= 50; index++) {
     //
     const html = await request.get(
       `https://books.toscrape.com/catalogue/page-${index}.html`
@@ -17,8 +17,8 @@ async function scrape() {
     await page.goto(`https://books.toscrape.com/catalogue/page-${index}.html`);
     const html2 = await page.content();
 
-    // fs.writeFileSync('./req.txt', html);
-    // fs.writeFileSync('pup.txt', html2);
+    fs.writeFileSync('./req.txt', html);
+    fs.writeFileSync('pup.txt', html2);
 
     const $ = cheerio.load(html2);
     $('h3 > a').each((index, element) => console.log($(element).text()));
