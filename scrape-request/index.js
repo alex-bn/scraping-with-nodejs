@@ -1,8 +1,8 @@
 const request = require('request-promise');
 const cheerio = require('cheerio');
-const config = require('../config');
 const puppeteer = require('puppeteer');
 const ObjectsToCsv = require('objects-to-csv');
+const config = require('../config');
 
 const proxy = `http://api.scraperapi.com/?api_key=${config.scrapeAPIKey}&url=`;
 const testUrl = 'https://sfbay.craigslist.org/d/software-qa-dba-etc/search/sof';
